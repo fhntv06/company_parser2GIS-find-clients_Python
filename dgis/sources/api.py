@@ -1,10 +1,31 @@
 from __future__ import annotations
 
+import re
+
 from ..errors import RetryLater
 from .base import Card, Page
 
 ITEMS_URL = "https://catalog.api.2gis.com/3.0/items"
 FIELDS = "items.contact_groups,items.rubrics,items.address_name,items.point"
+
+
+_REDIR = re.compile(r"^https?://link\.2gis\.\w+/[^?]*\?(https?://.+)$")
+
+
+def _website(c: dict) -> str | None:
+    """Чистый URL сайта. В `value` у 2GIS обычно редирект link.2gis.*, настоящий адрес в `url`/`text`/хвосте value.
+    Редирект в любом поле отбрасывается, берётся первое чистое значение."""
+    u = c.get("url")
+    if u and "link.2gis." not in u:
+        return u
+    v = c.get("value") or ""
+    m = _REDIR.match(v)
+    if m:
+        return m.group(1)
+    if v and "link.2gis." not in v:
+        return v
+    t = c.get("text") or ""
+    return t if "." in t and " " not in t else None
 
 
 def parse_item(it: dict) -> Card:
@@ -13,7 +34,7 @@ def parse_item(it: dict) -> Card:
         for c in g.get("contacts") or []:
             t = c.get("type")
             if t == "website":
-                v = c.get("value") or c.get("text") or c.get("url")
+                v = _website(c)
                 if v:
                     sites.append(v)
             elif t == "phone":

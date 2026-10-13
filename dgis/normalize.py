@@ -14,6 +14,8 @@ MARKETPLACE = {
     "avito.ru", "ozon.ru", "wildberries.ru", "flamp.ru", "zoon.ru", "yell.ru", "orgpage.ru",
     "prodoctorov.ru", "otzovik.com", "irecommend.ru", "linktr.ee", "taplink.cc", "taplink.ws",
     "clck.ru", "bit.ly", "goo.gl",
+    # виджеты чатов/обратного звонка: 2GIS отдаёт их как type=website
+    "jivo.chat", "jivo.ru", "livetex.ru", "talk-me.ru",
 }
 
 
@@ -71,3 +73,36 @@ def best_kind(kinds: list[str]) -> str:
         if k in kinds:
             return k
     return "none"
+
+
+def normalize_phone(raw: str | None) -> str | None:
+    """'8 (843) 245-21-12' / '+7 843 ...' -> '+78432452112'. Мусор -> None."""
+    digits = re.sub(r"\D", "", raw or "")
+    if len(digits) == 11 and digits[0] in "78":
+        return "+7" + digits[1:]
+    if len(digits) == 10:
+        return "+7" + digits
+    return ("+" + digits) if 11 <= len(digits) <= 15 else None
+
+
+_PARK = ("parking", "parked", "domainsale", "sedoparking", "domain-for-sale", "/park/")
+
+
+PROTECTED_STATUSES = (401, 403, 429, 503)     # сайт жив, но не пускает автоматические запросы
+
+
+def site_note(domain: str, final_url: str | None, status: int | None = None, error: str | None = None) -> str | None:
+    """Пометка по результату проверки: error:<причина> | protected | parked | redirect:<домен> | None."""
+    if error:
+        return "error:" + error
+    if status in PROTECTED_STATUSES:
+        return "protected"
+    if not final_url:
+        return None
+    low = final_url.lower()
+    if any(w in low for w in _PARK):
+        return "parked"
+    fs = normalize_site(final_url)
+    if fs and fs.domain != domain:
+        return "redirect:" + fs.domain
+    return None

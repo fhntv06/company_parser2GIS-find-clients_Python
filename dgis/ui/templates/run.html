@@ -1,6 +1,7 @@
 {% extends "base.html" %}{% block body %}
-<h1>Запуск сбора</h1>
-<form method="post" action="/start">
+<h1>Сбор из 2GIS API</h1>
+<p class="mut">Нужен ключ с доступом к контактам (демо-ключ сайты не отдаёт). Без ключа используйте вкладку Overture.</p>
+<form method="post" action="/2gis/start">
 <div class="row" style="align-items:start">
  <div style="flex:1;min-width:240px"><label>Города (по одному в строке)</label><textarea name="cities">{{ cities }}</textarea></div>
  <div style="flex:1;min-width:240px"><label>Рубрики (по одной в строке)</label><textarea name="rubrics">{{ rubrics }}</textarea></div>
@@ -11,9 +12,9 @@
  <button class="p">Старт</button>
 </div></form>
 <div class="row">
- <form method="post" action="/pause"><button>Пауза</button></form>
- <form method="post" action="/resume"><button>Продолжить</button></form>
- <form method="post" action="/stop"><button>Стоп</button></form>
+ <form method="post" action="/pause"><input type="hidden" name="next" value="/2gis"><button>Пауза</button></form>
+ <form method="post" action="/resume"><input type="hidden" name="next" value="/2gis"><button>Продолжить</button></form>
+ <form method="post" action="/stop"><input type="hidden" name="next" value="/2gis"><button>Стоп</button></form>
 </div>
 <h1 style="margin-top:22px">Прогресс</h1>
 <div id="progress">{% include "progress.html" %}</div>

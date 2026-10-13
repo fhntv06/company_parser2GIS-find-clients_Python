@@ -9,6 +9,8 @@
 <div class="card"><b>{{ s.none }}</b><span>без сайта</span></div>
 <div class="card"><b>{{ s.sites }}</b><span>уникальных сайтов</span></div>
 <div class="card"><b>{{ s.sites_ok }}</b><span>доступны</span></div>
+<div class="card"><b>{{ s.sites_protected }}</b><span>защищены от ботов</span></div>
+<div class="card"><b class="{{ 'bad' if s.sites_error }}">{{ s.sites_error }}</b><span>не открылись</span></div>
 <div class="card"><b class="{{ 'bad' if s.errors }}">{{ s.errors }}</b><span>ошибок (задач)</span></div>
 </div>
 <p class="mut">Задачи: {% for k,v in s.jobs.items() %}{{ k }}={{ v }} {% else %}нет{% endfor %}</p>

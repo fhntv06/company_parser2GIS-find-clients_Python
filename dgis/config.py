@@ -31,7 +31,11 @@ class Config:
     max_pages: int = 50
     db_path: str = "data/dgis.db"
     proxy: str | None = None
-    check_timeout: float = 5.0
+    check_timeout: float = 12.0
+    presets_path: str = "config/presets.yaml"
+    overture_dir: str = "data/overture"
+    overture_cache_days: int = 30
+    geocode_country: str = "ru"
     ui_host: str = "127.0.0.1"
     ui_port: int = 8000
     # секреты: только из окружения

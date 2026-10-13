@@ -7,11 +7,17 @@ from .checker import check_url
 from .config import Config
 from .errors import RetryLater
 from .limiter import RateLimiter
-from .normalize import best_kind, normalize_site
+from .ingest import store_card
+from .normalize import site_note
 from .sources.base import Card
 from .storage import Storage
 
 log = logging.getLogger("dgis")
+
+
+class _NoSource:
+    async def search(self, *a, **k):
+        raise RuntimeError("DGIS_KEY не задан в .env: сбор из 2GIS недоступен (импорт и проверка работают)")
 
 
 class Runner:
@@ -50,14 +56,14 @@ class Runner:
 
     # ---- запуск
     async def _build_clients(self) -> None:
+        if self.source is None and not self.cfg.dgis_key:
+            self.source = _NoSource()      # импорт из файла: ключ 2GIS не нужен
         if self.source is None:
             import httpx
             from .sources.api import ApiSource
 
             if self.cfg.source != "api":
                 raise RuntimeError("source=%s пока не реализован (v2)" % self.cfg.source)
-            if not self.cfg.dgis_key:
-                raise RuntimeError("DGIS_KEY не задан в .env")
             c = httpx.AsyncClient(timeout=20, proxy=self.cfg.proxy)
             self._clients.append(c)
             self.source = ApiSource(self.cfg.dgis_key, c, self.cfg.page_size)
@@ -137,18 +143,8 @@ class Runner:
             self.db.enqueue("collect_list", nxt, uniq=f"collect:{p['city']}:{p['rubric']}:{page + 1}", priority=1)
 
     def _store_card(self, card: Card, city: str, rubric: str) -> None:
-        sites = [s for s in (normalize_site(u) for u in card.websites) if s]
-        kind = best_kind([s.kind for s in sites])
-        self.db.upsert_business(card, city, rubric, card.websites[0] if card.websites else None, kind)
-        for s in sites:
-            if s.kind != "own":
-                continue
-            self.db.upsert_site(s.domain, s.url)
-            self.db.link(card.dgis_id, s.domain)
-            if self.db.site_needs_check(s.domain):
-                self.db.enqueue("check_site", {"domain": s.domain, "url": s.url},
-                                uniq=f"check:{s.domain}", priority=5)
+        store_card(self.db, card, city, rubric)
 
     async def _check(self, p: dict) -> None:
         status, final = await self.checker(p["url"])
-        self.db.set_site_check(p["domain"], status, final)
+        self.db.set_site_check(p["domain"], status, final, site_note(p["domain"], final))

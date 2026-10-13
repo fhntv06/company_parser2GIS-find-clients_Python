@@ -22,7 +22,8 @@ pre{background:rgba(127,127,127,.1);padding:10px;border-radius:6px;overflow:auto
 .mut{color:var(--mut)}.bad{color:var(--bad)}.ok{color:var(--ok)}
 </style></head><body>
 <nav>
-<a href="/" class="{{ 'on' if nav=='run' }}">Запуск</a>
+<a href="/" class="{{ 'on' if nav=='overture' }}">Overture (бесплатно)</a>
+<a href="/2gis" class="{{ 'on' if nav=='2gis' }}">2GIS API</a>
 <a href="/db" class="{{ 'on' if nav=='db' }}">База</a>
 <a href="/jobs" class="{{ 'on' if nav=='jobs' }}">Задачи</a>
 </nav><main>{% block body %}{% endblock %}</main></body></html>

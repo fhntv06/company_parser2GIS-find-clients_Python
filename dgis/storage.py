@@ -6,6 +6,8 @@ import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from .normalize import normalize_phone
+
 
 def now_iso(offset: float = 0) -> str:
     return (datetime.now(timezone.utc) + timedelta(seconds=offset)).strftime("%Y-%m-%dT%H:%M:%S")
@@ -17,7 +19,7 @@ CREATE TABLE IF NOT EXISTS businesses(
   phones TEXT, raw_url TEXT, site_kind TEXT DEFAULT 'none', collected_at TEXT
 );
 CREATE TABLE IF NOT EXISTS sites(            -- только собственные сайты (kind=own)
-  domain TEXT PRIMARY KEY, url TEXT, http_status INT, final_url TEXT, checked_at TEXT,
+  domain TEXT PRIMARY KEY, url TEXT, http_status INT, final_url TEXT, checked_at TEXT, note TEXT,
   analysis_status TEXT DEFAULT 'new'         -- контракт с этапом 2: new -> analyzed
 );
 CREATE TABLE IF NOT EXISTS business_sites(dgis_id TEXT, domain TEXT, PRIMARY KEY(dgis_id, domain));
@@ -27,6 +29,7 @@ CREATE TABLE IF NOT EXISTS jobs(
   attempts INT DEFAULT 0, max_attempts INT DEFAULT 5,
   run_after TEXT, locked_by TEXT, locked_at TEXT, error TEXT, created_at TEXT, updated_at TEXT
 );
+CREATE TABLE IF NOT EXISTS geocache(city TEXT PRIMARY KEY, bbox TEXT, created_at TEXT);
 CREATE INDEX IF NOT EXISTS ix_biz_city_rubric ON businesses(city, rubric);
 CREATE INDEX IF NOT EXISTS ix_biz_kind ON businesses(site_kind);
 CREATE INDEX IF NOT EXISTS ix_biz_collected ON businesses(collected_at);
@@ -52,6 +55,9 @@ class Storage:
         self.conn.execute("PRAGMA synchronous=NORMAL")
         self.conn.execute("PRAGMA busy_timeout=5000")
         self.conn.executescript(SCHEMA)
+        cols = [r[1] for r in self.conn.execute("PRAGMA table_info(sites)")]
+        if "note" not in cols:                       # миграция старых баз
+            self.conn.execute("ALTER TABLE sites ADD COLUMN note TEXT")
 
     # ---- низкий уровень
     def exec(self, sql: str, params=()):
@@ -90,18 +96,27 @@ class Storage:
         r = self.one("SELECT checked_at FROM sites WHERE domain=?", (domain,))
         return r is None or r["checked_at"] is None
 
-    def set_site_check(self, domain: str, status: int, final_url: str | None) -> None:
-        self.exec("UPDATE sites SET http_status=?, final_url=?, checked_at=? WHERE domain=?",
-                  (status, final_url, now_iso(), domain))
+    def set_site_check(self, domain: str, status: int, final_url: str | None, note: str | None = None) -> None:
+        self.exec("UPDATE sites SET http_status=?, final_url=?, note=?, checked_at=? WHERE domain=?",
+                  (status, final_url, note, now_iso(), domain))
+
+    def requeue_checks(self) -> int:
+        n = 0
+        for r in self.rows("SELECT domain,url FROM sites"):
+            if self.enqueue("check_site", {"domain": r["domain"], "url": r["url"]},
+                            uniq=f"check:{r['domain']}", force=True):
+                n += 1
+        return n
 
     # ---- очередь
-    def enqueue(self, type_: str, payload: dict, uniq: str, priority: int = 5, force: bool = False) -> bool:
+    def enqueue(self, type_: str, payload: dict, uniq: str, priority: int = 5, force: bool = False,
+                max_attempts: int = 5) -> bool:
         ts = now_iso()
-        data = (type_, json.dumps(payload, ensure_ascii=False), uniq, priority, ts, ts, ts)
+        data = (type_, json.dumps(payload, ensure_ascii=False), uniq, priority, max_attempts, ts, ts, ts)
         with self.lock:
             cur = self.conn.execute(
-                """INSERT OR IGNORE INTO jobs(type,payload,uniq,priority,run_after,created_at,updated_at)
-                   VALUES(?,?,?,?,?,?,?)""", data)
+                """INSERT OR IGNORE INTO jobs(type,payload,uniq,priority,max_attempts,run_after,created_at,updated_at)
+                   VALUES(?,?,?,?,?,?,?,?)""", data)
             if cur.rowcount:
                 return True
             if force:
@@ -162,6 +177,20 @@ class Storage:
     def job_counts(self) -> dict:
         return {r["status"]: r["n"] for r in self.rows("SELECT status, COUNT(*) n FROM jobs GROUP BY status")}
 
+    def recent_jobs(self, type_: str, limit: int = 10) -> list[dict]:
+        rows = self.rows("SELECT id,status,payload,attempts,error,updated_at FROM jobs WHERE type=? "
+                         "ORDER BY id DESC LIMIT ?", (type_, limit))
+        for r in rows:
+            r["payload"] = json.loads(r["payload"])
+        return rows
+
+    def get_geocache(self, city: str) -> str | None:
+        r = self.one("SELECT bbox FROM geocache WHERE city=?", (city,))
+        return r["bbox"] if r else None
+
+    def set_geocache(self, city: str, bbox: str) -> None:
+        self.exec("INSERT OR REPLACE INTO geocache(city,bbox,created_at) VALUES(?,?,?)", (city, bbox, now_iso()))
+
     def failed_jobs(self, limit: int = 50) -> list[dict]:
         return self.rows("SELECT id,type,payload,attempts,error,updated_at FROM jobs "
                          "WHERE status='failed' ORDER BY id DESC LIMIT ?", (limit,))
@@ -173,7 +202,9 @@ class Storage:
         total = sum(kinds.values())
         s = self.one("""SELECT COUNT(*) sites,
                 SUM(CASE WHEN http_status BETWEEN 200 AND 399 THEN 1 ELSE 0 END) ok,
-                SUM(CASE WHEN checked_at IS NULL THEN 1 ELSE 0 END) unchecked FROM sites""")
+                SUM(CASE WHEN checked_at IS NULL THEN 1 ELSE 0 END) unchecked,
+                SUM(CASE WHEN note='protected' THEN 1 ELSE 0 END) protected,
+                SUM(CASE WHEN note LIKE 'error:%' THEN 1 ELSE 0 END) errors FROM sites""")
         per_min = self.one("SELECT COUNT(*) n FROM businesses WHERE collected_at>=?", (now_iso(-60),))["n"]
         jobs = self.job_counts()
         return {
@@ -181,6 +212,9 @@ class Storage:
             "marketplace": kinds.get("marketplace", 0), "none": kinds.get("none", 0),
             "with_site": total - kinds.get("none", 0),
             "sites": s["sites"] or 0, "sites_ok": s["ok"] or 0, "sites_unchecked": s["unchecked"] or 0,
+            "sites_protected": s["protected"] or 0, "sites_error": s["errors"] or 0,
+            "error_reasons": {r["note"][6:]: r["n"] for r in self.rows(
+                "SELECT note, COUNT(*) n FROM sites WHERE note LIKE 'error:%' GROUP BY note ORDER BY n DESC")},
             "per_min": per_min, "jobs": jobs, "errors": jobs.get("failed", 0),
         }
 
@@ -194,9 +228,20 @@ class Storage:
             w.append("b.rubric=?"); p.append(f["rubric"])
         st = f.get("status")
         if st == "ok":
-            w.append("s.http_status BETWEEN 200 AND 399")
+            w.append("s.http_status BETWEEN 200 AND 399 AND COALESCE(s.note,'')<>'parked'")
+        elif st == "parked":
+            w.append("s.note='parked'")
+        elif st == "redirect":
+            w.append("s.note LIKE 'redirect:%'")
+        elif st == "alive":      # открывается или просто не пускает бота (protected), не парковка
+            w.append("(s.http_status BETWEEN 200 AND 399 OR s.note='protected') AND COALESCE(s.note,'')<>'parked'")
+        elif st == "protected":
+            w.append("s.note='protected'")
+        elif st == "error":
+            w.append("s.note LIKE 'error:%'")
         elif st == "bad":
-            w.append("s.checked_at IS NOT NULL AND (s.http_status IS NULL OR s.http_status NOT BETWEEN 200 AND 399)")
+            w.append("s.checked_at IS NOT NULL AND (s.http_status IS NULL OR s.http_status NOT BETWEEN 200 AND 399)"
+                     " AND COALESCE(s.note,'')<>'protected'")
         elif st == "unchecked":
             w.append("s.checked_at IS NULL")
         if f.get("analysis"):
@@ -216,7 +261,7 @@ class Storage:
         w, p = self._where(f)
         order = SORTS.get(sort, "s.domain") + (" DESC" if desc else " ASC")
         return self.rows(
-            f"""SELECT s.domain, s.url, s.http_status, s.analysis_status,
+            f"""SELECT s.domain, s.url, s.http_status, s.analysis_status, s.note,
                 MIN(b.name) name, MIN(b.city) city, MIN(b.rubric) rubric, MIN(b.phones) phones,
                 COUNT(b.dgis_id) cards {self._FROM} WHERE {w} GROUP BY s.domain
                 ORDER BY {order} LIMIT ? OFFSET ?""", (*p, limit, offset))
@@ -225,7 +270,7 @@ class Storage:
         w, p = self._where(f)
         out = []
         for r in self.rows(
-            f"""SELECT s.domain, s.url, s.http_status, s.final_url, s.analysis_status,
+            f"""SELECT s.domain, s.url, s.http_status, s.final_url, s.analysis_status, s.note,
                 MIN(b.city) city, MIN(b.rubric) rubric,
                 json_group_array(b.name) names, json_group_array(b.phones) phones
                 {self._FROM} WHERE {w} GROUP BY s.domain ORDER BY s.domain""", p):
@@ -233,12 +278,16 @@ class Storage:
             phones: list[str] = []
             for blob in json.loads(r["phones"]):
                 for ph in json.loads(blob or "[]"):
+                    ph = normalize_phone(ph) or ph
                     if ph not in phones:
                         phones.append(ph)
+            note = r["note"]
+            # для анализа: если сайт переехал на другой домен, берём конечный адрес
+            target = r["final_url"] if (note or "").startswith("redirect:") and r["final_url"] else r["url"]
             out.append({"domain": r["domain"], "url": r["url"], "business_names": names,
                         "city": r["city"], "rubric": r["rubric"], "phones": phones,
                         "http_status": r["http_status"], "final_url": r["final_url"],
-                        "analysis_status": r["analysis_status"]})
+                        "note": note, "target_url": target, "analysis_status": r["analysis_status"]})
         return out
 
     def filter_values(self) -> dict:
