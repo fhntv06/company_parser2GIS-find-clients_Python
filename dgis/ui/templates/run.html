@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block body %}
+<h1>Запуск сбора</h1>
+<form method="post" action="/start">
+<div class="row" style="align-items:start">
+ <div style="flex:1;min-width:240px"><label>Города (по одному в строке)</label><textarea name="cities">{{ cities }}</textarea></div>
+ <div style="flex:1;min-width:240px"><label>Рубрики (по одной в строке)</label><textarea name="rubrics">{{ rubrics }}</textarea></div>
+</div>
+<div class="row">
+ <div><label>Параллельность (1–10)</label><input type="number" name="concurrency" min="1" max="10" value="{{ cfg.concurrency }}" style="width:90px"></div>
+ <label style="margin:0 0 6px"><input type="checkbox" name="force"> пересобрать уже собранное</label>
+ <button class="p">Старт</button>
+</div></form>
+<div class="row">
+ <form method="post" action="/pause"><button>Пауза</button></form>
+ <form method="post" action="/resume"><button>Продолжить</button></form>
+ <form method="post" action="/stop"><button>Стоп</button></form>
+</div>
+<h1 style="margin-top:22px">Прогресс</h1>
+<div id="progress">{% include "progress.html" %}</div>
+<script>
+setInterval(function(){fetch('/progress').then(r=>r.text()).then(h=>{document.getElementById('progress').innerHTML=h}).catch(()=>{})},2000);
+</script>
+{% endblock %}

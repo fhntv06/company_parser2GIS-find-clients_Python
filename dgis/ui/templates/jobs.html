@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% block body %}
+<h1>Задачи</h1>
+<div class="grid">{% for st in ['queued','running','done','failed','cancelled'] %}
+<div class="card"><b>{{ counts.get(st,0) }}</b><span>{{ st }}</span></div>{% endfor %}</div>
+<form method="post" action="/jobs/retry"><button class="p">Повторить упавшие</button></form>
+<h1 style="margin-top:20px">Упавшие</h1>
+<div class="wrap"><table><thead><tr><th>#</th><th>Тип</th><th>Параметры</th><th>Попыток</th><th>Ошибка</th><th>Когда</th></tr></thead><tbody>
+{% for j in failed %}<tr><td>{{ j.id }}</td><td>{{ j.type }}</td><td class="mut">{{ j.payload }}</td><td>{{ j.attempts }}</td><td class="bad">{{ j.error }}</td><td>{{ j.updated_at }}</td></tr>
+{% else %}<tr><td colspan="6" class="mut">Нет упавших задач</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

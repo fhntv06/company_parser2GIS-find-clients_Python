@@ -1,0 +1,15 @@
+<p>Состояние: <b>{{ {'idle':'простаивает','running':'работает','paused':'пауза'}[state] }}</b>
+ · скорость: {{ s.per_min }} карточек/мин</p>
+<div class="grid">
+<div class="card"><b>{{ s.cards }}</b><span>карточек</span></div>
+<div class="card"><b>{{ s.with_site }}</b><span>с сайтом</span></div>
+<div class="card"><b>{{ s.own }}</b><span>own</span></div>
+<div class="card"><b>{{ s.social }}</b><span>social</span></div>
+<div class="card"><b>{{ s.marketplace }}</b><span>marketplace</span></div>
+<div class="card"><b>{{ s.none }}</b><span>без сайта</span></div>
+<div class="card"><b>{{ s.sites }}</b><span>уникальных сайтов</span></div>
+<div class="card"><b>{{ s.sites_ok }}</b><span>доступны</span></div>
+<div class="card"><b class="{{ 'bad' if s.errors }}">{{ s.errors }}</b><span>ошибок (задач)</span></div>
+</div>
+<p class="mut">Задачи: {% for k,v in s.jobs.items() %}{{ k }}={{ v }} {% else %}нет{% endfor %}</p>
+<pre>{{ log|join('\n') }}</pre>

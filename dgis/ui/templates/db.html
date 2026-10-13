@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% block body %}
+<h1>База сайтов <span class="mut">({{ total }})</span></h1>
+<form method="get" class="row">
+ <div><label>Поиск</label><input name="q" value="{{ f.q or '' }}" placeholder="домен или название"></div>
+ <div><label>Город</label><select name="city"><option value="">все</option>{% for c in cities %}<option {{ 'selected' if f.city==c }}>{{ c }}</option>{% endfor %}</select></div>
+ <div><label>Рубрика</label><select name="rubric"><option value="">все</option>{% for r in rubrics %}<option {{ 'selected' if f.rubric==r }}>{{ r }}</option>{% endfor %}</select></div>
+ <div><label>Доступность</label><select name="status">
+  <option value="">все</option>
+  <option value="ok" {{ 'selected' if f.status=='ok' }}>доступны</option>
+  <option value="bad" {{ 'selected' if f.status=='bad' }}>недоступны</option>
+  <option value="unchecked" {{ 'selected' if f.status=='unchecked' }}>не проверены</option></select></div>
+ <div><label>Анализ</label><select name="analysis"><option value="">все</option>
+  <option value="new" {{ 'selected' if f.analysis=='new' }}>new</option>
+  <option value="analyzed" {{ 'selected' if f.analysis=='analyzed' }}>analyzed</option></select></div>
+ <button class="p">Найти</button>
+ <a href="/export?format=csv&{{ qs }}">CSV</a> <a href="/export?format=jsonl&{{ qs }}">JSONL</a>
+</form>
+<div class="wrap"><table><thead><tr>
+{% for key,title in [('domain','Домен'),('name','Название'),('city','Город'),('rubric','Рубрика'),('cards','Карточек'),('http_status','HTTP'),('analysis_status','Анализ')] %}
+<th><a href="/db?{{ qs }}&sort={{ key }}&desc={{ 0 if (sort==key and desc) else 1 if sort==key else 0 }}">{{ title }}{{ ' ↓' if sort==key and desc else ' ↑' if sort==key }}</a></th>{% endfor %}
+<th>Телефоны</th></tr></thead><tbody>
+{% for r in rows %}<tr>
+<td><a href="{{ r.url }}" target="_blank" rel="noopener noreferrer">{{ r.domain }}</a></td><td>{{ r.name }}</td><td>{{ r.city }}</td><td>{{ r.rubric }}</td>
+<td>{{ r.cards }}</td><td class="{{ 'ok' if r.http_status and 200 <= r.http_status < 400 else 'bad' if r.http_status is not none }}">{{ r.http_status if r.http_status is not none else '—' }}</td>
+<td>{{ r.analysis_status }}</td><td class="mut">{{ (r.phones or '')[:60] }}</td></tr>
+{% else %}<tr><td colspan="8" class="mut">Пока пусто</td></tr>{% endfor %}
+</tbody></table></div>
+<p class="row">{% if page>1 %}<a href="/db?{{ qs }}&sort={{ sort }}&desc={{ desc }}&page={{ page-1 }}">← назад</a>{% endif %}
+<span class="mut">стр. {{ page }} из {{ pages }}</span>
+{% if page<pages %}<a href="/db?{{ qs }}&sort={{ sort }}&desc={{ desc }}&page={{ page+1 }}">вперёд →</a>{% endif %}</p>
+{% endblock %}

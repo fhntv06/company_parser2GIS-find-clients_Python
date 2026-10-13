@@ -1,0 +1,12 @@
+cities: [Казань]
+rubrics: ["Стоматологии"]
+source: api
+concurrency: 3          # воркеров сбора (к 2GIS)
+check_concurrency: 20   # проверка сайтов (обычные сайты, 2GIS не затрагивает)
+rate_limit_rps: 2       # глобальный лимит запросов к 2GIS в секунду
+page_size: 10           # поднять до 50 после `python -m dgis probe`
+max_pages: 50
+db_path: data/dgis.db
+check_timeout: 5
+ui_host: 127.0.0.1
+ui_port: 8000
