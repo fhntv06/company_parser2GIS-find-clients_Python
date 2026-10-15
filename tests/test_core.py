@@ -5,12 +5,12 @@ import unittest
 from pathlib import Path
 
 from dgis.config import Config
-from dgis.errors import RetryLater
+from dgis.pipeline.errors import RetryLater
 from dgis.export import iter_csv, iter_jsonl
-from dgis.limiter import RateLimiter
+from dgis.pipeline.limiter import RateLimiter
 from dgis.normalize import best_kind, normalize_site
-from dgis.runner import Runner
-from dgis.sources.api import parse_item
+from dgis.pipeline.runner import Runner
+from dgis.sources.api2gis import parse_item
 from dgis.sources.base import Card, Page
 from dgis.storage import Storage
 
@@ -52,6 +52,25 @@ class TestParse(unittest.TestCase):
                             {"type": "website", "value": "http://a.ru", "url": "https://link.2gis.ru/x"},
                             {"type": "email", "value": "a@a.ru"}]}]})
         self.assertEqual((c.websites, c.phones), (["http://a.ru"], ["+78430000000"]))
+
+    def test_real_2gis_sample(self):
+        """Реальный ответ 2GIS: value = редирект link.2gis.ru, чистый адрес в url."""
+        r = "http://link.2gis.ru/1.2/76CC/webapi/2026/project32/700/null/abc?"
+        c = parse_item({"id": "70000001103939664", "name": "Мосцветок", "contact_groups": [
+            {"contacts": [
+                {"url": "http://moscvetok.ru", "text": "moscvetok.ru", "type": "website", "value": r + "http://moscvetok.ru"},
+                {"url": "http://jivo.chat/Uz6xucBwLQ", "text": "Онлайн-чат с компанией", "type": "website",
+                 "value": r + "http://jivo.chat/Uz6xucBwLQ"}]},
+            {"contacts": [{"text": "+7‒936‒266‒82‒14", "type": "phone", "value": "+79362668214"}]}]})
+        self.assertEqual(c.websites, ["http://moscvetok.ru", "http://jivo.chat/Uz6xucBwLQ"])
+        self.assertEqual(c.phones, ["+79362668214"])
+        kinds = [normalize_site(u).kind for u in c.websites]
+        self.assertEqual(kinds, ["own", "marketplace"])   # чат не считается собственным сайтом
+
+    def test_value_only_redirect(self):
+        c = parse_item({"id": "1", "contact_groups": [{"contacts": [
+            {"type": "website", "value": "http://link.2gis.ru/1.2/AA/x/y?http://a.ru"}]}]})
+        self.assertEqual(c.websites, ["http://a.ru"])
 
     def test_empty(self):
         self.assertEqual(parse_item({"id": 5}).websites, [])
@@ -200,7 +219,7 @@ class TestTemplates(unittest.TestCase):
         db = Storage(":memory:")
         s = db.stats()
         ctx = {"s": s, "state": "idle", "log": ["x"], "nav": "run", "cfg": make_cfg(), "cities": "a", "rubrics": "b"}
-        self.assertIn("Запуск сбора", env.get_template("run.html").render(**ctx))
+        self.assertIn("Сбор из 2GIS API", env.get_template("run.html").render(**ctx))
         rows = [{"domain": "a.ru", "url": "https://a.ru/", "name": "A", "city": "K", "rubric": "R", "cards": 1,
                  "http_status": 200, "analysis_status": "new", "phones": "[]"}]
         html = env.get_template("db.html").render(nav="db", rows=rows, total=1, page=1, pages=1, f={}, qs="",
