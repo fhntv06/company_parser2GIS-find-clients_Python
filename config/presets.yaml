@@ -1,0 +1,25 @@
+# Темы для выбора в UI и `python -m dgis overture --preset <ключ>`.
+# terms — подстроки (через запятую в UI), ищутся в КАТЕГОРИИ и в НАЗВАНИИ места, регистр не важен.
+# Категории Overture английские (dental_clinic), в названиях можно искать и русские слова.
+# ВАЖНО: проверено только на `dental`. Для остальных тем сверьте категории командой
+#   python -m dgis overture --city "Казань" --list-categories
+# и поправьте terms. Слишком короткие подстроки дают лишнее ("dent" находит student_union).
+presets:
+  dental:
+    title: Стоматологии
+    terms: [dental, dentist, orthodont, endodont, periodont, стоматол]
+  medical:
+    title: Медицинские центры и клиники
+    terms: [medical_center, clinic, hospital, laborator, поликлиник]
+  auto:
+    title: Автосервисы
+    terms: [auto_repair, automotive_repair, car_repair, auto_body, tire, автосервис, шиномонтаж]
+  beauty:
+    title: Салоны красоты
+    terms: [beauty_salon, hair_salon, barber, nail_salon, салон красоты, парикмахерск]
+  fitness:
+    title: Фитнес и спорт
+    terms: [gym, fitness, yoga, фитнес]
+  education:
+    title: Образование и курсы
+    terms: [school, tutor, language_school, training, курсы, школа]
