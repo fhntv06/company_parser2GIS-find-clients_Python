@@ -1,8 +1,13 @@
 .env
+data/
+logs/
 *.db
 *.db-wal
 *.db-shm
-logs/
 __pycache__/
 *.pyc
+.venv/
 exports/
+*.csv
+*.jsonl
+*.geoparquet

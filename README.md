@@ -1,36 +1,58 @@
-# 2GIS → база сайтов (этап 1, beta)
+# Сбор базы сайтов организаций (этап 1)
 
-## Установка
-```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env        # впишите DGIS_KEY=...
+Собирает организации города по теме (стоматологии, автосервисы...), оставляет тех, у кого есть **собственный сайт**,
+проверяет, что сайт открывается, и отдаёт чистую таблицу для следующего этапа (анализ сайтов на соответствие 152-ФЗ).
+
+```
+город + тема ──► источник ──► нормализация, дедуп ──► проверка сайта ──► база (SQLite) ──► экспорт CSV / JSONL
+                 Overture (бесплатно)                  статус, парковка,
+                 2GIS API (нужен платный ключ)         переезд на другой домен
+                 свой CSV (Чекко, Контур, Excel)
 ```
 
-## Порядок запуска
-```bash
-python -m dgis probe                      # 1) что отдаёт ключ: сайты, page_size, поля
-# по результату probe поправьте page_size / rate_limit_rps в config.yaml
-python -m dgis run --cities "Казань" --rubrics "Стоматологии"   # 2) мини-прогон
-python -m dgis stats
-python -m dgis export --format jsonl --out sites.jsonl --status ok
-python -m dgis ui                         # UI: http://127.0.0.1:8000
+## Быстрый старт (5 минут)
+
+```powershell
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m dgis ui          # откройте http://127.0.0.1:8000
 ```
-Прервали (Ctrl+C / перезапуск) — `python -m dgis run --resume` продолжит без дублей.
-`python -m dgis retry-failed` возвращает упавшие задачи.
 
-## Что внутри
-- `jobs` в SQLite = очередь; воркеры: `collect_list` (2GIS, глобальный лимитер) и `check_site` (отдельный пул).
-- 429/403 → пауза всех запросов на 60 с и повтор задачи; прочие ошибки — экспоненциальные ретраи, после 5 попыток `failed`.
-- Таблица `sites` — только собственные сайты (own). Соцсети/маркетплейсы учитываются в `businesses.site_kind`.
-- Контракт с этапом 2: JSONL (`export`) или `SELECT * FROM sites WHERE analysis_status='new' AND http_status BETWEEN 200 AND 399`.
+На главной странице выберите **город** и **тему**, нажмите «Собрать». Через несколько минут вкладка **База** покажет
+сайты, а кнопки CSV / JSONL выгрузят их. Подробно: [docs/quickstart.md](docs/quickstart.md).
 
-## Известные ограничения beta
-- Запрос идёт как `q="<рубрика> <город>"`; лимит глубины выдачи 2GIS на один запрос не обходится (дробление по районам — v2). Сравнивайте «всего по запросу» в логе с собранным.
-- Ссылки `link.2gis.*` без целевого URL пропускаются.
-- Не реализовано (v2): расписания, `WebSource`/Playwright, ротация прокси.
-- Проверка сайтов идёт с `verify=False` (нужен только статус ответа).
-- Ключ только в `.env`; в логах и UI маскируется.
+## Документация
 
-### Использование
-- Почта: cloudecode1@devjumpstart.com
+| Документ | О чём |
+|---|---|
+| [docs/quickstart.md](docs/quickstart.md) | установка (Windows и Linux), первый сбор через UI и командную строку |
+| [docs/sources.md](docs/sources.md) | откуда берутся данные, что умеет и не умеет каждый источник, как выбрать |
+| [docs/architecture.md](docs/architecture.md) | как устроен проект: модули, очередь, база данных |
+| [docs/data-contract.md](docs/data-contract.md) | формат выгрузки для этапа 2 и как его читать |
+| [docs/troubleshooting.md](docs/troubleshooting.md) | типичные ошибки и что с ними делать |
+| [docs/legal.md](docs/legal.md) | на что обратить внимание по закону (реклама, персональные данные, лицензии) |
+
+## Структура проекта
+
+```
+dgis/
+  cli.py, config.py, logs.py     запуск, настройки, журнал
+  storage.py                     база данных SQLite, очередь задач
+  normalize.py, export.py        адреса сайтов и телефоны, выгрузка
+  pipeline/                      очередь, воркеры, проверка сайтов, лимитер
+  sources/                       Overture, 2GIS API, импорт CSV
+  ui/                            веб-интерфейс
+config.yaml                      настройки
+config/presets.yaml              темы для выбора в UI
+docs/                            документация
+tools/                           диагностика: python tools/diagnose_site.py домен.ru
+tests/                           тесты (python -m unittest discover -s tests)
+data/, logs/                     база, кэш Overture и журналы (создаются сами, в git не попадают)
+```
+
+## Статус и что дальше
+
+Готово (beta): сбор из Overture / 2GIS API / CSV, проверка сайтов, UI, экспорт, возобновление после остановки.
+Не сделано: расписания (APScheduler), сбор через браузер (Playwright), ротация прокси, дедуп организаций по телефону,
+стыковка с анализатором (этап 2).

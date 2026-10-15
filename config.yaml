@@ -1,12 +1,25 @@
-cities: [Казань]
-rubrics: ["Стоматологии"]
-source: api
-concurrency: 3          # воркеров сбора (к 2GIS)
-check_concurrency: 20   # проверка сайтов (обычные сайты, 2GIS не затрагивает)
-rate_limit_rps: 2       # глобальный лимит запросов к 2GIS в секунду
-page_size: 10           # поднять до 50 после `python -m dgis probe`
-max_pages: 50
+# Основные настройки. Секреты (ключ 2GIS, пароль UI) только в .env, не здесь.
 db_path: data/dgis.db
-check_timeout: 5
-ui_host: 127.0.0.1
+presets_path: config/presets.yaml     # темы для UI и `overture --preset`
+
+# Overture (бесплатный источник)
+overture_dir: data/overture           # кэш скачанных данных и промежуточные CSV
+overture_cache_days: 30               # сколько дней считать скачанные данные свежими
+geocode_country: ru                   # ограничение поиска города (пусто = весь мир)
+
+# Воркеры и проверка сайтов
+concurrency: 3                        # воркеров сбора
+check_concurrency: 20                 # параллельных проверок сайтов (обычные сайты, не 2GIS)
+check_timeout: 12                     # секунд на ответ сайта (медленные хостинги отвечают дольше 5 с)
+
+# 2GIS API (нужен ключ в .env и тариф с контактами)
+source: api
+rate_limit_rps: 2                     # лимит запросов к 2GIS в секунду
+page_size: 10                         # максимум для демо-ключа
+max_pages: 60
+cities: [Казань]                      # значения по умолчанию на вкладке «2GIS API»
+rubrics: ["Стоматологии"]
+
+# UI
+ui_host: 127.0.0.1                    # для доступа извне включите UI_USER/UI_PASSWORD в .env
 ui_port: 8000
