@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS businesses(
 );
 CREATE TABLE IF NOT EXISTS sites(            -- только собственные сайты (kind=own)
   domain TEXT PRIMARY KEY, url TEXT, http_status INT, final_url TEXT, checked_at TEXT, note TEXT,
+  submitted_at TEXT, scan_ref TEXT, scan_status TEXT,
   analysis_status TEXT DEFAULT 'new'         -- контракт с этапом 2: new -> analyzed
 );
 CREATE TABLE IF NOT EXISTS business_sites(dgis_id TEXT, domain TEXT, PRIMARY KEY(dgis_id, domain));
@@ -56,8 +57,9 @@ class Storage:
         self.conn.execute("PRAGMA busy_timeout=5000")
         self.conn.executescript(SCHEMA)
         cols = [r[1] for r in self.conn.execute("PRAGMA table_info(sites)")]
-        if "note" not in cols:                       # миграция старых баз
-            self.conn.execute("ALTER TABLE sites ADD COLUMN note TEXT")
+        for col in ("note", "submitted_at", "scan_ref", "scan_status"):     # миграция старых баз
+            if col not in cols:
+                self.conn.execute(f"ALTER TABLE sites ADD COLUMN {col} TEXT")
 
     # ---- низкий уровень
     def exec(self, sql: str, params=()):
@@ -99,6 +101,12 @@ class Storage:
     def set_site_check(self, domain: str, status: int, final_url: str | None, note: str | None = None) -> None:
         self.exec("UPDATE sites SET http_status=?, final_url=?, note=?, checked_at=? WHERE domain=?",
                   (status, final_url, note, now_iso(), domain))
+
+    def set_analysis(self, domain: str, status: str, scan_ref: str | None = None,
+                     scan_status: str | None = None) -> None:
+        self.exec("UPDATE sites SET analysis_status=?, scan_ref=COALESCE(?, scan_ref), scan_status=?, "
+                  "submitted_at=COALESCE(submitted_at, ?) WHERE domain=?",
+                  (status, scan_ref, scan_status, now_iso(), domain))
 
     def requeue_checks(self) -> int:
         n = 0
@@ -287,7 +295,9 @@ class Storage:
             out.append({"domain": r["domain"], "url": r["url"], "business_names": names,
                         "city": r["city"], "rubric": r["rubric"], "phones": phones,
                         "http_status": r["http_status"], "final_url": r["final_url"],
-                        "note": note, "target_url": target, "analysis_status": r["analysis_status"]})
+                        "note": note, "target_url": target,
+                        "scan_hint": "protected" if note == "protected" else "ok",
+                        "analysis_status": r["analysis_status"]})
         return out
 
     def filter_values(self) -> dict:

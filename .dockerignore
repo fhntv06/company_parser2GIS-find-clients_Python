@@ -1,0 +1,11 @@
+.env
+.git
+.venv
+data
+logs
+__pycache__
+*.pyc
+*.zip
+*.csv
+*.jsonl
+*.geoparquet

@@ -44,6 +44,9 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--out", default="-")
     e.add_argument("--city"); e.add_argument("--rubric")
     e.add_argument("--status", choices=["ok", "alive", "protected", "error", "bad", "parked", "redirect", "unchecked"])
+    sb = sub.add_parser("submit", help="отправить новые живые сайты на проверку в этап 2 (Laravel API)")
+    sb.add_argument("--limit", type=int)
+    sub.add_parser("sync", help="обновить статусы отправленных сайтов из этапа 2")
     ck = sub.add_parser("check", help="проверить один сайт и показать причину отказа")
     ck.add_argument("site")
     sub.add_parser("stats", help="статистика")
@@ -106,6 +109,10 @@ def main(argv: list[str] | None = None) -> int:
                 db.requeue_running(); print("\nПрервано. Продолжить проверку: python -m dgis run --resume")
         _print_stats(db)
     elif a.cmd == "ui":
+        from .ui.security import ui_security_problem
+        problem = ui_security_problem(cfg)
+        if problem:
+            print(problem); return 2
         import uvicorn
         from .ui.app import create_app
         uvicorn.run(create_app(cfg, db), host=cfg.ui_host, port=cfg.ui_port)
@@ -117,6 +124,12 @@ def main(argv: list[str] | None = None) -> int:
             out.write(chunk)
         if out is not sys.stdout:
             out.close(); print("Сохранено:", a.out)
+    elif a.cmd in ("submit", "sync"):
+        from .pipeline.leadgen import LeadgenError, run_submit, run_sync
+        try:
+            print(run_submit(cfg, db, a.limit) if a.cmd == "submit" else run_sync(cfg, db))
+        except LeadgenError as e:
+            print("Ошибка:", e); return 1
     elif a.cmd == "check":
         from .normalize import normalize_site, site_note
         from .pipeline.checker import check_url, make_client

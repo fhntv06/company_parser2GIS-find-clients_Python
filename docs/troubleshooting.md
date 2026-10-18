@@ -19,6 +19,7 @@
 | Overture долго «качает» | первый запуск города, данные берутся из облака | подождать, повторные запросы используют кэш `data/overture/` |
 | `ResourceWarning: unclosed database` в тестах | тесты используют базу в памяти | безвредно |
 | Задача `failed` | ошибка источника или сети | вкладка «Задачи» покажет причину; «Повторить упавшие» или `python -m dgis retry-failed` |
+| `database disk image is malformed` | файл базы повреждён (копировали `.db` без `-wal`/`-shm`, база в облачной папке, сбой диска) | остановить процессы; `python tools/rescue_db.py data/dgis.db data/dgis_rescued.db`, затем заменить файл; либо удалить `data/dgis.db*` и повторить сбор (кэш Overture в `data/overture/` сохранится) |
 | Прервали работу | | `python -m dgis run --resume` (или просто `ui`): незавершённое продолжится |
 
 Журнал: `logs/parser.log` (ключи и пароли в нём маскируются).

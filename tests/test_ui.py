@@ -188,6 +188,13 @@ class TestUI(unittest.TestCase):
         self.assertEqual(self.post("/pause", {"next": "//evil.com"}).headers["location"], "/")
         self.assertEqual(self.post("/stop", {}).headers["location"], "/")
 
+    def test_submit_without_config_shows_error(self):
+        for path in ("/submit", "/sync"):
+            r = self.post(path, {})
+            self.assertEqual(r.status_code, 303)
+            self.assertTrue(r.headers["location"].startswith("/db?msg="), path)
+            self.assertIn("LEADGEN", r.headers["location"])
+
     def test_db_and_export(self):
         from dgis.sources.base import Card
         from dgis.pipeline.ingest import store_card

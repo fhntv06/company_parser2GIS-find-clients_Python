@@ -31,6 +31,7 @@ python -m dgis ui          # откройте http://127.0.0.1:8000
 | [docs/architecture.md](docs/architecture.md) | как устроен проект: модули, очередь, база данных |
 | [docs/data-contract.md](docs/data-contract.md) | формат выгрузки для этапа 2 и как его читать |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | типичные ошибки и что с ними делать |
+| [docs/integration.md](docs/integration.md) | связь с этапом 2 (Laravel): API, Docker, безопасность |
 | [docs/legal.md](docs/legal.md) | на что обратить внимание по закону (реклама, персональные данные, лицензии) |
 
 ## Структура проекта

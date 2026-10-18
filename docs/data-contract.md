@@ -16,7 +16,8 @@
 | `http_status` | число | ответ сайта; `0` означает, что ответа не было (причина в `note`) |
 | `final_url` | строка | куда привели редиректы |
 | `note` | строка / null | `error:<причина>` (`timeout`, `dns`, `ssl`, `reset`, `connect`, `redirects`), `protected` (сайт жив, но не пускает бота: 401/403/429/503), `parked` (заглушка хостера), `redirect:<домен>` (ушёл на другой домен) или пусто |
-| `analysis_status` | строка | `new` → `analyzed`, ставит этап 2 |
+| `scan_hint` | строка | `ok` или `protected` (сайт жив, но не пускает ботов) |
+| `analysis_status` | строка | `new` → `submitted` → `done` / `blocked` / `failed` (меняется при отправке в этап 2, см. [integration.md](integration.md)) |
 
 Пример строки:
 ```json

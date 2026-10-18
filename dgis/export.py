@@ -8,7 +8,7 @@ from typing import Iterator
 from .storage import Storage
 
 CSV_COLS = ["domain", "url", "business_names", "city", "rubric", "phones",
-            "http_status", "final_url", "note", "target_url", "analysis_status"]
+            "http_status", "final_url", "note", "target_url", "scan_hint", "analysis_status"]
 
 
 def iter_jsonl(db: Storage, f: dict) -> Iterator[str]:

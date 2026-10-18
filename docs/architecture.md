@@ -31,6 +31,7 @@ flowchart LR
 | `pipeline/runner.py` | воркеры, ретраи, пауза/стоп, обработчики задач `overture`, `collect_list`, `check_site` |
 | `pipeline/ingest.py` | запись карточки в базу и постановка проверки сайта (общее для всех источников) |
 | `pipeline/checker.py` | проверка доступности сайта: браузерные заголовки, https затем http, любой HTTP-ответ = сайт жив, причина отказа сохраняется (`error:<причина>`); временные сбои (`timeout`, `reset`, `connect`, `dns`) откладываются и повторяются до 3 раз |
+| `pipeline/leadgen.py` | отправка сайтов этапу 2 по API (пакеты, повторы, `Retry-After`) и синхронизация статусов |
 | `pipeline/limiter.py` | глобальный лимит запросов к 2GIS, пауза при 429/403 |
 | `sources/overture.py` | город → рамка, скачивание, фильтр по теме, оркестрация |
 | `sources/api2gis.py` | клиент 2GIS Places API |

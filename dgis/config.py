@@ -36,16 +36,20 @@ class Config:
     overture_dir: str = "data/overture"
     overture_cache_days: int = 30
     geocode_country: str = "ru"
+    leadgen_batch_size: int = 50
+    leadgen_timeout: float = 30.0
     ui_host: str = "127.0.0.1"
     ui_port: int = 8000
     # секреты: только из окружения
     dgis_key: str = ""
+    leadgen_url: str = ""
+    leadgen_token: str = ""
     ui_user: str = ""
     ui_password: str = ""
 
     @property
     def secrets(self) -> list[str]:
-        return [s for s in (self.dgis_key, self.ui_password, self.proxy or "") if s]
+        return [s for s in (self.dgis_key, self.ui_password, self.leadgen_token, self.proxy or "") if s]
 
 
 def load_config(path: str = "config.yaml") -> Config:
@@ -59,5 +63,9 @@ def load_config(path: str = "config.yaml") -> Config:
     cfg.dgis_key = os.environ.get("DGIS_KEY", "")
     cfg.ui_user = os.environ.get("UI_USER", "")
     cfg.ui_password = os.environ.get("UI_PASSWORD", "")
+    cfg.leadgen_url = os.environ.get("LEADGEN_API_URL", cfg.leadgen_url)
+    cfg.leadgen_token = os.environ.get("LEADGEN_TOKEN", "")
+    cfg.ui_host = os.environ.get("UI_HOST", cfg.ui_host)
+    cfg.ui_port = int(os.environ.get("UI_PORT", cfg.ui_port))
     cfg.proxy = os.environ.get("PROXY_URL") or cfg.proxy
     return cfg

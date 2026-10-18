@@ -1,5 +1,10 @@
 {% extends "base.html" %}{% block body %}
 <h1>База сайтов <span class="mut">({{ total }})</span></h1>
+{% if msg %}<p class="card">{{ msg }}</p>{% endif %}
+<div class="row">
+ <form method="post" action="/submit"><button class="p">Отправить на проверку (живые, новые)</button></form>
+ <form method="post" action="/sync"><button>Обновить статусы</button></form>
+</div>
 <form method="get" class="row">
  <div><label>Поиск</label><input name="q" value="{{ f.q or '' }}" placeholder="домен или название"></div>
  <div><label>Город</label><select name="city"><option value="">все</option>{% for c in cities %}<option {{ 'selected' if f.city==c }}>{{ c }}</option>{% endfor %}</select></div>
@@ -15,8 +20,7 @@
   <option value="parked" {{ 'selected' if f.status=='parked' }}>парковка домена</option>
   <option value="redirect" {{ 'selected' if f.status=='redirect' }}>ушли на другой домен</option></select></div>
  <div><label>Анализ</label><select name="analysis"><option value="">все</option>
-  <option value="new" {{ 'selected' if f.analysis=='new' }}>new</option>
-  <option value="analyzed" {{ 'selected' if f.analysis=='analyzed' }}>analyzed</option></select></div>
+  {% for v in ['new','submitted','done','blocked','failed','rejected'] %}<option value="{{ v }}" {{ 'selected' if f.analysis==v }}>{{ v }}</option>{% endfor %}</select></div>
  <button class="p">Найти</button>
  <a href="/export?format=csv&{{ qs }}">CSV</a> <a href="/export?format=jsonl&{{ qs }}">JSONL</a>
 </form>

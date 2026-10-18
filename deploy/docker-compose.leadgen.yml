@@ -1,0 +1,39 @@
+# Добавьте эти сервисы в docker-compose.yml проекта (рядом с backend). Папка этапа 1: ./leadgen
+# В .env проекта добавьте: LEADGEN_TOKEN, LEADGEN_UI_USER, LEADGEN_UI_PASSWORD
+services:
+  leadgen:
+    build:
+      context: ./leadgen
+    container_name: zakonny_leadgen
+    restart: unless-stopped
+    environment:
+      LEADGEN_API_URL: http://backend:8000/api/internal
+      LEADGEN_TOKEN: ${LEADGEN_TOKEN}
+      UI_HOST: 0.0.0.0                # в контейнере слушаем всё, поэтому логин и пароль обязательны
+      UI_USER: ${LEADGEN_UI_USER}
+      UI_PASSWORD: ${LEADGEN_UI_PASSWORD}
+    volumes:
+      - leadgen_data:/app/data        # база, кэш Overture
+      - leadgen_logs:/app/logs
+    ports:
+      - "127.0.0.1:8100:8000"         # UI только с этого компьютера
+    depends_on:
+      - backend
+
+  # Отдельный воркер для проверок этапа 1, чтобы они не задерживали проверки клиентов.
+  # В существующем сервисе queue укажите: php artisan queue:work --queue=default
+  queue_leads:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: zakonny_queue_leads
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    command: php artisan queue:work --queue=leads --tries=2 --timeout=120
+    depends_on:
+      - postgres
+
+volumes:
+  leadgen_data:
+  leadgen_logs:
