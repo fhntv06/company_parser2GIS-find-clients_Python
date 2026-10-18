@@ -11,6 +11,7 @@ from fastapi.templating import Jinja2Templates
 
 from ..export import iter_csv, iter_jsonl
 from ..logs import setup_logging
+from ..pipeline.leadgen import LeadgenError, run_submit, run_sync
 from ..pipeline.runner import Runner
 from ..sources.overture import load_presets, parse_bbox
 from ..storage import Storage
@@ -141,7 +142,28 @@ def create_app(cfg, db: Storage | None = None):
         qs = "&".join(f"{k}={quote(str(v))}" for k, v in f.items() if v)
         return templates.TemplateResponse(request, "db.html", {
             "nav": "db", "rows": rows, "total": total, "page": page, "pages": pages,
-            "f": f, "qs": qs, "sort": sort, "desc": desc, **db.filter_values()})
+            "f": f, "qs": qs, "sort": sort, "desc": desc, "msg": request.query_params.get("msg"),
+            **db.filter_values()})
+
+    @app.post("/submit")
+    async def submit():
+        try:
+            r = await asyncio.to_thread(run_submit, cfg, db)
+            msg = (f"Отправлено: {r['queued'] + r['duplicate'] + r['waiting']} (новых {r['queued']}, ждут лимита {r['waiting']}, уже были {r['duplicate']}), "
+                   f"отклонено {r['rejected']}, без ответа {r['missing']}" + (f". Ошибка: {r['error']}" if r["error"] else ""))
+        except LeadgenError as e:
+            msg = f"Ошибка: {e}"
+        return RedirectResponse("/db?msg=" + quote(msg), 303)
+
+    @app.post("/sync")
+    async def sync():
+        try:
+            r = await asyncio.to_thread(run_sync, cfg, db)
+            msg = (f"Статусы: готово {r['done']}, заблокировано {r['blocked']}, ошибки {r['failed']}, "
+                   f"в работе {r['pending']}, не найдено {r['lost']}" + (f". Ошибка: {r['error']}" if r["error"] else ""))
+        except LeadgenError as e:
+            msg = f"Ошибка: {e}"
+        return RedirectResponse("/db?msg=" + quote(msg), 303)
 
     @app.get("/export")
     async def export(request: Request, format: str = "jsonl"):
