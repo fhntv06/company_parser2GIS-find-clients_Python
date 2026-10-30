@@ -1,0 +1,133 @@
+# Русские названия категорий Overture для страницы «База» (фильтр и колонка «Рубрика»).
+# Ключ = категория как в данных (латиницей), значение = как показывать. Регистр ключа не важен.
+# Чего здесь нет, показывается как есть. Список категорий в вашей базе: python -m dgis categories
+# Названия составлены по смыслу и не сверены с полной таксономией Overture: правьте под свои данные.
+labels:
+  # медицина
+  health_care: Здравоохранение
+  health_and_medical: Медицина
+  medical_center: Медицинский центр
+  clinic: Клиника
+  hospital: Больница
+  doctor: Врач
+  doctors: Врачи
+  pediatrician: Педиатр
+  laboratory: Лаборатория
+  medical_laboratory: Медицинская лаборатория
+  diagnostic_center: Диагностический центр
+  radiologist: Рентгенология
+  pharmacy: Аптека
+  optometrist: Оптометрист
+  ophthalmologist: Офтальмолог
+  psychologist: Психолог
+  physical_therapy: Физиотерапия
+  massage: Массаж
+  veterinarian: Ветеринар
+  veterinary_clinic: Ветеринарная клиника
+  # стоматология
+  dentist: Стоматолог
+  dental_clinic: Стоматологическая клиника
+  general_dentistry: Общая стоматология
+  cosmetic_dentist: Эстетическая стоматология
+  pediatric_dentist: Детская стоматология
+  orthodontist: Ортодонт
+  endodontist: Эндодонтист
+  periodontist: Пародонтолог
+  oral_surgeon: Челюстно-лицевая хирургия
+  # красота
+  beauty_and_spa: Красота и спа
+  beauty_salon: Салон красоты
+  hair_salon: Парикмахерская
+  barber: Барбершоп
+  barber_shop: Барбершоп
+  nail_salon: Ногтевой сервис
+  spa: Спа
+  day_spa: Спа
+  cosmetologist: Косметолог
+  tattoo_parlor: Тату-салон
+  # авто
+  automotive: Авто
+  automotive_repair: Автосервис
+  auto_repair: Автосервис
+  car_repair: Автосервис
+  auto_body_shop: Кузовной ремонт
+  tire_shop: Шиномонтаж
+  car_wash: Автомойка
+  car_dealer: Автосалон
+  auto_parts_store: Автозапчасти
+  gas_station: АЗС
+  car_rental: Прокат автомобилей
+  # спорт
+  gym: Спортзал
+  fitness_center: Фитнес-центр
+  yoga_studio: Студия йоги
+  sports_club: Спортивный клуб
+  swimming_pool: Бассейн
+  martial_arts: Единоборства
+  dance_studio: Танцевальная студия
+  active_life: Активный отдых
+  # образование
+  education: Образование
+  school: Школа
+  language_school: Языковая школа
+  tutoring: Репетиторство
+  training_center: Учебный центр
+  kindergarten: Детский сад
+  university: Университет
+  college: Колледж
+  student_union: Студенческое объединение
+  driving_school: Автошкола
+  music_school: Музыкальная школа
+  child_care: Детский центр
+  # еда
+  food: Еда
+  restaurant: Ресторан
+  cafe: Кафе
+  bar: Бар
+  bakery: Пекарня
+  coffee_shop: Кофейня
+  fast_food_restaurant: Фастфуд
+  pizza_restaurant: Пиццерия
+  sushi_restaurant: Суши
+  catering: Кейтеринг
+  # магазины
+  store: Магазин
+  shopping: Магазины
+  supermarket: Супермаркет
+  grocery_store: Продукты
+  clothing_store: Одежда
+  shoe_store: Обувь
+  electronics_store: Электроника
+  furniture_store: Мебель
+  flower_shop: Цветы
+  pet_store: Зоомагазин
+  bookstore: Книжный магазин
+  jewelry_store: Ювелирный магазин
+  # услуги и бизнес
+  professional_services: Профессиональные услуги
+  financial_service: Финансовые услуги
+  real_estate: Недвижимость
+  real_estate_agent: Агентство недвижимости
+  lawyer: Юрист
+  legal_services: Юридические услуги
+  accountant: Бухгалтер
+  accounting: Бухгалтерские услуги
+  bank: Банк
+  insurance_agency: Страхование
+  travel_agency: Турагентство
+  hotel: Гостиница
+  hostel: Хостел
+  photographer: Фотограф
+  cleaning_service: Клининг
+  construction: Строительство
+  contractor: Подрядчик
+  plumber: Сантехник
+  electrician: Электрик
+  printing_service: Типография
+  advertising_agency: Рекламное агентство
+  software_development: Разработка ПО
+  courier_service: Курьерская служба
+  moving_company: Переезды
+  laundry: Прачечная
+  dry_cleaning: Химчистка
+  event_planning: Организация мероприятий
